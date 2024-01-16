@@ -4,7 +4,6 @@ import numpy
 import apriltag
 
 def draw_pose(overlay, camera_params, tag_size, pose, z_sign=1):
-
     opoints = numpy.array([
         -1, -1, 0,
          1, -1, 0,
@@ -34,16 +33,11 @@ def draw_pose(overlay, camera_params, tag_size, pose, z_sign=1):
     fx, fy, cx, cy = camera_params
 
     K = numpy.array([fx, 0, cx, 0, fy, cy, 0, 0, 1]).reshape(3, 3)
-
     rvec, _ = cv2.Rodrigues(pose[:3,:3])
     tvec = pose[:3, 3]
-
     dcoeffs = numpy.zeros(5)
-
     ipoints, _ = cv2.projectPoints(opoints, rvec, tvec, K, dcoeffs)
-
     ipoints = numpy.round(ipoints).astype(int)
-    
     ipoints = [tuple(pt) for pt in ipoints.reshape(-1, 2)]
 
     for i, j in edges:
@@ -53,12 +47,13 @@ def draw_pose(overlay, camera_params, tag_size, pose, z_sign=1):
 fx, fy, cx, cy = (9973.977159660377, 9432.229890251116, 470.03687743610527, 239.154470602995)
 camera_params = (fx, fy, cx, cy)
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(2)
 
 while True:
     ret, orig = cap.read()
     gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
-    options = apriltag.DetectorOptions(families="tag16h5")
+    # options = apriltag.DetectorOptions(families="tag16h5", quad_contours=False, quad_blur=0.8)
+    options = apriltag.DetectorOptions(families="tag36h11")
     
     detector = apriltag.Detector(options)
     results = detector.detect(gray)
@@ -67,12 +62,17 @@ while True:
     # loop over the AprilTag detection results
     # print(f'Tags found: {len(results)}')
     for r in results:
-        pose, e0, e1 = detector.detection_pose(r, camera_params, 1, 1)
-        # skip low confidence images
-        draw_pose(output, camera_params, 1, pose, 1)
+        """
         if r.decision_margin < 30 or r.hamming > 4:
             continue
-        print(r.tag_id)
+        """
+        pose, e0, e1 = detector.detection_pose(r, camera_params, 1, 1)
+        x = pose[0][3]
+        y = pose[1][3]
+        distance = pose[2][3]
+        # code.interact(local=locals()) 
+        print(f'x, y, z: {x}, {y}, {distance}')
+        draw_pose(output, camera_params, 1, pose, 1)
         # extract the bounding box (x, y)-coordinates for the AprilTag
         # and convert each of the (x, y)-coordinate pairs to integers
         (ptA, ptB, ptC, ptD) = r.corners
